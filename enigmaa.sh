@@ -1,7 +1,7 @@
 #!/bin/bash
 
-FICHERO_CONFIG="config.cfg"
-FICHERO_FRASES="frases.dat"         #aqui pasamos los archivos a constante para mejor manejo
+CONFIG_FILE="config.cfg"
+FRASES_FILE="frases.dat"         #aqui pasamos los archivos a constante para mejor manejo
 
 #------------------------------------------
 TMP_FILE="/tmp/enigma_temp$$" #esto nose que es
@@ -62,48 +62,12 @@ fi
 
 # VALIDAR FICHEROS
 validar_ficheros_iniciales() {
-    if [ ! -f "$FICHERO_CONFIG" ] || [ ! -f "$FICHERO_FRASES" ]; then
+    if [ ! -f "$CONFIG_FILE" ] || [ ! -f "$FRASES_FILE" ]; then
         echo "Error: Los archivos 'config.cfg' o 'frases.dat' no existen o estan incompletos."
+        return 1
+    fi
 }
 
-
-#------------------------------------------------------------------------
-#                               M    E    N    U
-#------------------------------------------------------------------------
-
-
-# Ejecución principal
-validar_prerrequisitos
-
-while true; do
-    clear
-    echo "===================================="
-    echo "         JUEGO \"EL ENIGMA\"          "
-    echo "===================================="
-    echo "C) CONFIGURACIÓN"
-    echo "J) JUGAR"
-    echo "F) FRASES"
-    echo "E) ESTADÍSTICAS"
-    echo "S) SALIR"
-    echo "===================================="
-    read -p "Introduzca una opción >> " OPCION
-
-    # Conversión a mayúscula de la opción elegida
-    OPCION=$(echo "$OPCION" | tr '[:lower:]' '[:upper:]')
-
-    case "$OPCION" in
-        C) opcion_configuracion ;;
-        J) opcion_jugar ;;
-        F) opcion_frases ;;
-        E) opcion_estadisticas ;;
-        S) opcion_salir ;;
-        *) 
-            echo "Opción no válida."
-            pausa
-            ;;
-    esac
-
-done
 
 # FUNCIONES
 
@@ -287,7 +251,9 @@ opcion_configuracion() {
     pausa
 }
 
-#----------------------------
+
+#--------------------------------------------------
+
 opcion_jugar() {
     echo "=== INICIANDO PARTIDA ==="
     # Lógica de juego: comprobar frases suficientes, validar log, desarrollo por rondas
@@ -358,8 +324,8 @@ opcion_frases() {
                 sleep 1
                 ;;
         esac
+        pause
     done
-    pausa
 }
 
 
@@ -376,3 +342,42 @@ opcion_salir() {
     echo "Saliendo del juego..."
     exit 0
 }
+
+
+#------------------------------------------------------------------------
+#                               M    E    N    U
+#------------------------------------------------------------------------
+
+
+# Ejecución principal
+validar_ficheros_iniciales
+
+while true; do
+    clear
+    echo "===================================="
+    echo "         JUEGO \"EL ENIGMA\"          "
+    echo "===================================="
+    echo "C) CONFIGURACIÓN"
+    echo "J) JUGAR"
+    echo "F) FRASES"
+    echo "E) ESTADÍSTICAS"
+    echo "S) SALIR"
+    echo "===================================="
+    read -p "Introduzca una opción >> " OPCION
+
+    # Conversión a mayúscula de la opción elegida
+    OPCION=$(echo "$OPCION" | tr '[:lower:]' '[:upper:]')
+
+    case "$OPCION" in
+        C) opcion_configuracion ;;
+        J) opcion_jugar ;;
+        F) opcion_frases ;;
+        E) opcion_estadisticas ;;
+        S) opcion_salir ;;
+        *) 
+            echo "Opción no válida."
+            pausa
+            ;;
+    esac
+
+done
