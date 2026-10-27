@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONFIG_FILE="./config.cfg"
+CONFIG_FILE="./config.cfg"      # los ficheros a variable
 FRASES_FILE="./frases.dat"
 
 limpiar_temporales() {
@@ -33,6 +33,31 @@ mostrar_info_grupo() {
     echo "  respecto al total de rondas jugadas en el histórico)."
     echo "========================================================"
 }
+
+if [ $# -gt 1 ]; then           # si hay GreaterThan 1 arg
+    mostrar_uso                 # muestra error (mostrar_uso) 
+    exit 1
+
+elif [ $# -eq 1 ]; then         # si hay un argumento (-eq 1)
+    if [ "$1" = "-g" ]; then    # si el arg es -g
+        mostrar_info_grupo      # muestra la info
+        exit 0
+    else                        # si no, muestra error (mostrar_uso)
+        mostrar_uso
+        exit 1
+    fi
+fi
+
+#menu
+
+
+
+
+
+
+
+
+#configuracion
 
 es_entero() {
     case "$1" in
