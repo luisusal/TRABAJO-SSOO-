@@ -68,6 +68,11 @@ validar_ficheros_iniciales() {
     fi
 }
 
+opcion_config() {
+    echo "=== CONFIGURACION ==="
+    # Lógica de juego: comprobar frases suficientes, validar log, desarrollo por rondas
+    pausa
+}
 
 opcion_jugar() {
     echo "=== INICIANDO PARTIDA ==="
