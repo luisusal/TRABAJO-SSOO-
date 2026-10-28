@@ -131,9 +131,9 @@ opcion_configuracion() {
         case "$SUBOP_MAYUS" in
             1)
                 read -r -p "Nuevo valor para JUGADORES (2..4): " VAL
-                if ES_ENTERO "$VAL" && [ "$VAL" -ge 2 ] && [ "$VAL" -le 4 ]; then
+                if es_entero "$VAL" && [ "$VAL" -ge 2 ] && [ "$VAL" -le 4 ]; then
                     JUGADORES="$VAL"
-                    GUARDAR_CONFIG
+                    guardar_config
                     echo "JUGADORES actualizado correctamente."
                 else
                     echo "Error: JUGADORES debe ser un entero entre 2 y 4."
@@ -142,9 +142,9 @@ opcion_configuracion() {
                 ;;
             2)
                 read -r -p "Nuevo valor para RONDAS (entero > 0): " VAL
-                if ES_ENTERO "$VAL" && [ "$VAL" -gt 0 ]; then
+                if es_entero "$VAL" && [ "$VAL" -gt 0 ]; then
                     RONDAS="$VAL"
-                    GUARDAR_CONFIG
+                    guardar_config
                     echo "RONDAS actualizado correctamente."
                 else
                     echo "Error: RONDAS debe ser un entero positivo mayor que 0."
@@ -153,16 +153,16 @@ opcion_configuracion() {
                 ;;
             3)
                 read -r -p "Nuevo valor para PVIDA (50..100): " VAL
-                if ES_ENTERO "$VAL" && [ "$VAL" -ge 50 ] && [ "$VAL" -le 100 ]; then
+                if es_entero "$VAL" && [ "$VAL" -ge 50 ] && [ "$VAL" -le 100 ]; then
                     PVIDA="$VAL"
                     while [ "$PRESPUESTA" -ge "$PVIDA" ]; do
                         echo "Aviso: PRESPUESTA ($PRESPUESTA) debe ser menor que PVIDA ($PVIDA)."
                         read -r -p "Introduzca un nuevo PRESPUESTA ($((PFALLO + 1))..$((PVIDA - 1))): " NUEVO_PR
-                        if ES_ENTERO "$NUEVO_PR" && [ "$NUEVO_PR" -gt "$PFALLO" ] && [ "$NUEVO_PR" -lt "$PVIDA" ]; then
+                        if es_entero "$NUEVO_PR" && [ "$NUEVO_PR" -gt "$PFALLO" ] && [ "$NUEVO_PR" -lt "$PVIDA" ]; then
                             PRESPUESTA="$NUEVO_PR"
                         fi
                     done
-                    GUARDAR_CONFIG
+                    guardar_config
                     echo "PVIDA actualizado correctamente."
                 else
                     echo "Error: PVIDA debe ser un entero entre 50 y 100."
@@ -171,16 +171,16 @@ opcion_configuracion() {
                 ;;
             4)
                 read -r -p "Nuevo valor para PFALLO (5..10): " VAL
-                if ES_ENTERO "$VAL" && [ "$VAL" -ge 5 ] && [ "$VAL" -le 10 ]; then
+                if es_entero "$VAL" && [ "$VAL" -ge 5 ] && [ "$VAL" -le 10 ]; then
                     PFALLO="$VAL"
                     while [ "$PRESPUESTA" -le "$PFALLO" ]; do
                         echo "Aviso: PRESPUESTA ($PRESPUESTA) debe ser mayor que PFALLO ($PFALLO)."
                         read -r -p "Introduzca un nuevo PRESPUESTA ($((PFALLO + 1))..$((PVIDA - 1))): " NUEVO_PR
-                        if ES_ENTERO "$NUEVO_PR" && [ "$NUEVO_PR" -gt "$PFALLO" ] && [ "$NUEVO_PR" -lt "$PVIDA" ]; then
+                        if es_entero "$NUEVO_PR" && [ "$NUEVO_PR" -gt "$PFALLO" ] && [ "$NUEVO_PR" -lt "$PVIDA" ]; then
                             PRESPUESTA="$NUEVO_PR"
                         fi
                     done
-                    GUARDAR_CONFIG
+                    guardar_config
                     echo "PFALLO actualizado correctamente."
                 else
                     echo "Error: PFALLO debe ser un entero entre 5 y 10."
@@ -191,9 +191,9 @@ opcion_configuracion() {
                 MIN_PR=$((PFALLO + 1))
                 MAX_PR=$((PVIDA - 1))
                 read -r -p "Nuevo valor para PRESPUESTA ($MIN_PR..$MAX_PR): " VAL
-                if ES_ENTERO "$VAL" && [ "$VAL" -gt "$PFALLO" ] && [ "$VAL" -lt "$PVIDA" ]; then
+                if es_entero "$VAL" && [ "$VAL" -gt "$PFALLO" ] && [ "$VAL" -lt "$PVIDA" ]; then
                     PRESPUESTA="$VAL"
-                    GUARDAR_CONFIG
+                    guardar_config
                     echo "PRESPUESTA actualizado correctamente."
                 else
                     echo "Error: PRESPUESTA debe ser mayor que PFALLO ($PFALLO) y menor que PVIDA ($PVIDA)."
@@ -203,9 +203,9 @@ opcion_configuracion() {
             6)
                 echo "Niveles: 1=Refranes | 2=+Películas | 3=+Música | 4=+Deportes"
                 read -r -p "Nuevo valor para CATEGORIAS (1..4): " VAL
-                if ES_ENTERO "$VAL" && [ "$VAL" -ge 1 ] && [ "$VAL" -le 4 ]; then
+                if es_entero "$VAL" && [ "$VAL" -ge 1 ] && [ "$VAL" -le 4 ]; then
                     CATEGORIAS="$VAL"
-                    GUARDAR_CONFIG
+                    guardar_config
                     echo "CATEGORIAS actualizado correctamente."
                 else
                     echo "Error: CATEGORIAS debe ser un entero entre 1 y 4."
@@ -215,9 +215,9 @@ opcion_configuracion() {
             7)
                 echo "Modos IA: 0=Alfabética | 1=Aleatoria | 2=Propia del grupo"
                 read -r -p "Nuevo valor para ESTRATEGIA (0..2): " VAL
-                if ES_ENTERO "$VAL" && [ "$VAL" -ge 0 ] && [ "$VAL" -le 2 ]; then
+                if es_entero "$VAL" && [ "$VAL" -ge 0 ] && [ "$VAL" -le 2 ]; then
                     ESTRATEGIA="$VAL"
-                    GUARDAR_CONFIG
+                    guardar_config
                     echo "ESTRATEGIA actualizado correctamente."
                 else
                     echo "Error: ESTRATEGIA debe ser un entero entre 0 y 2."
@@ -230,7 +230,7 @@ opcion_configuracion() {
                     LOCAL_DIR_LOG=$(dirname "$VAL")
                     if [ -d "$LOCAL_DIR_LOG" ] || mkdir -p "$LOCAL_DIR_LOG" 2>/dev/null; then
                         LOG="$VAL"
-                        GUARDAR_CONFIG
+                        guardar_config
                         echo "LOG actualizado correctamente."
                     else
                         echo "Error: No se puede crear o acceder al directorio $LOCAL_DIR_LOG."
@@ -249,7 +249,7 @@ opcion_configuracion() {
                 ;;
         esac
     done
-    PAUSA
+    pausa
 }
 
 
