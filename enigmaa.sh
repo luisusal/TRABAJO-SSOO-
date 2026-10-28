@@ -77,15 +77,15 @@ pausa() {
     echo ""
 }
 
-es_entero() {
-    case "$1" in
-        ''|*[!0-9]*) return 1 ;;
+es_entero() { 
+    case "$1" in    # analiza el contenido del primer parametro despues de "es_entero" en la llamada, (ej: es_entero "$val" se recibe dentro de esta funcion con el nombre $1
+        ''|*[!0-9]*) return 1 ;; # '' dato vacío, *_* cualquier dato delante o detras, no digito 0 al 9
         *) return 0 ;;
     esac
 }
 
 guardar_config() {
-    cat <<EOF > "./config.cfg"
+    cat <<EOF > "./config.cfg" # cat << EOF: documento el incrustado, >  borra el contenido viejo y excribe uno nuevo desde cero #asignamos cada valor de la configuracion a variables 
 JUGADORES=$JUGADORES
 RONDAS=$RONDAS
 PVIDA=$PVIDA
@@ -98,6 +98,7 @@ EOF
 }
 
 # Funciones de las opciones del menú
+
 opcion_configuracion() {
     JUGADORES=$(grep '^JUGADORES=' "./config.cfg" | cut -d'=' -f2)
     RONDAS=$(grep '^RONDAS=' "./config.cfg" | cut -d'=' -f2)
@@ -121,18 +122,18 @@ opcion_configuracion() {
         echo "6) CATEGORIAS = $CATEGORIAS"
         echo "7) ESTRATEGIA = $ESTRATEGIA"
         echo "8) LOG        = $LOG"
-        echo "V) Volver al menú principal"
+        echo "V) Finalizar edición"
         echo "=========================================="
-        read -r -p "Seleccione el parámetro a modificar (1-8 o V) >> " subop
+        read -r -p "Seleccione el parámetro a modificar (1-8 o V) >> " SUBOP
 
-        subop_mayus=$(echo "$subop" | tr '[:lower:]' '[:upper:]')
+        SUBOP_MAYUS=$(echo "$SUBOP" | tr '[:lower:]' '[:upper:]')
 
-        case "$subop_mayus" in
+        case "$SUBOP_MAYUS" in
             1)
-                read -r -p "Nuevo valor para JUGADORES (2..4): " val
-                if es_entero "$val" && [ "$val" -ge 2 ] && [ "$val" -le 4 ]; then
-                    JUGADORES="$val"
-                    guardar_config
+                read -r -p "Nuevo valor para JUGADORES (2..4): " VAL
+                if ES_ENTERO "$VAL" && [ "$VAL" -ge 2 ] && [ "$VAL" -le 4 ]; then
+                    JUGADORES="$VAL"
+                    GUARDAR_CONFIG
                     echo "JUGADORES actualizado correctamente."
                 else
                     echo "Error: JUGADORES debe ser un entero entre 2 y 4."
@@ -140,10 +141,10 @@ opcion_configuracion() {
                 sleep 1
                 ;;
             2)
-                read -r -p "Nuevo valor para RONDAS (entero > 0): " val
-                if es_entero "$val" && [ "$val" -gt 0 ]; then
-                    RONDAS="$val"
-                    guardar_config
+                read -r -p "Nuevo valor para RONDAS (entero > 0): " VAL
+                if ES_ENTERO "$VAL" && [ "$VAL" -gt 0 ]; then
+                    RONDAS="$VAL"
+                    GUARDAR_CONFIG
                     echo "RONDAS actualizado correctamente."
                 else
                     echo "Error: RONDAS debe ser un entero positivo mayor que 0."
@@ -151,17 +152,17 @@ opcion_configuracion() {
                 sleep 1
                 ;;
             3)
-                read -r -p "Nuevo valor para PVIDA (50..100): " val
-                if es_entero "$val" && [ "$val" -ge 50 ] && [ "$val" -le 100 ]; then
-                    PVIDA="$val"
+                read -r -p "Nuevo valor para PVIDA (50..100): " VAL
+                if ES_ENTERO "$VAL" && [ "$VAL" -ge 50 ] && [ "$VAL" -le 100 ]; then
+                    PVIDA="$VAL"
                     while [ "$PRESPUESTA" -ge "$PVIDA" ]; do
                         echo "Aviso: PRESPUESTA ($PRESPUESTA) debe ser menor que PVIDA ($PVIDA)."
-                        read -r -p "Introduzca un nuevo PRESPUESTA ($((PFALLO + 1))..$((PVIDA - 1))): " nuevo_pr
-                        if es_entero "$nuevo_pr" && [ "$nuevo_pr" -gt "$PFALLO" ] && [ "$nuevo_pr" -lt "$PVIDA" ]; then
-                            PRESPUESTA="$nuevo_pr"
+                        read -r -p "Introduzca un nuevo PRESPUESTA ($((PFALLO + 1))..$((PVIDA - 1))): " NUEVO_PR
+                        if ES_ENTERO "$NUEVO_PR" && [ "$NUEVO_PR" -gt "$PFALLO" ] && [ "$NUEVO_PR" -lt "$PVIDA" ]; then
+                            PRESPUESTA="$NUEVO_PR"
                         fi
                     done
-                    guardar_config
+                    GUARDAR_CONFIG
                     echo "PVIDA actualizado correctamente."
                 else
                     echo "Error: PVIDA debe ser un entero entre 50 y 100."
@@ -169,17 +170,17 @@ opcion_configuracion() {
                 sleep 1
                 ;;
             4)
-                read -r -p "Nuevo valor para PFALLO (5..10): " val
-                if es_entero "$val" && [ "$val" -ge 5 ] && [ "$val" -le 10 ]; then
-                    PFALLO="$val"
+                read -r -p "Nuevo valor para PFALLO (5..10): " VAL
+                if ES_ENTERO "$VAL" && [ "$VAL" -ge 5 ] && [ "$VAL" -le 10 ]; then
+                    PFALLO="$VAL"
                     while [ "$PRESPUESTA" -le "$PFALLO" ]; do
                         echo "Aviso: PRESPUESTA ($PRESPUESTA) debe ser mayor que PFALLO ($PFALLO)."
-                        read -r -p "Introduzca un nuevo PRESPUESTA ($((PFALLO + 1))..$((PVIDA - 1))): " nuevo_pr
-                        if es_entero "$nuevo_pr" && [ "$nuevo_pr" -gt "$PFALLO" ] && [ "$nuevo_pr" -lt "$PVIDA" ]; then
-                            PRESPUESTA="$nuevo_pr"
+                        read -r -p "Introduzca un nuevo PRESPUESTA ($((PFALLO + 1))..$((PVIDA - 1))): " NUEVO_PR
+                        if ES_ENTERO "$NUEVO_PR" && [ "$NUEVO_PR" -gt "$PFALLO" ] && [ "$NUEVO_PR" -lt "$PVIDA" ]; then
+                            PRESPUESTA="$NUEVO_PR"
                         fi
                     done
-                    guardar_config
+                    GUARDAR_CONFIG
                     echo "PFALLO actualizado correctamente."
                 else
                     echo "Error: PFALLO debe ser un entero entre 5 y 10."
@@ -187,12 +188,12 @@ opcion_configuracion() {
                 sleep 1
                 ;;
             5)
-                min_pr=$((PFALLO + 1))
-                max_pr=$((PVIDA - 1))
-                read -r -p "Nuevo valor para PRESPUESTA ($min_pr..$max_pr): " val
-                if es_entero "$val" && [ "$val" -gt "$PFALLO" ] && [ "$val" -lt "$PVIDA" ]; then
-                    PRESPUESTA="$val"
-                    guardar_config
+                MIN_PR=$((PFALLO + 1))
+                MAX_PR=$((PVIDA - 1))
+                read -r -p "Nuevo valor para PRESPUESTA ($MIN_PR..$MAX_PR): " VAL
+                if ES_ENTERO "$VAL" && [ "$VAL" -gt "$PFALLO" ] && [ "$VAL" -lt "$PVIDA" ]; then
+                    PRESPUESTA="$VAL"
+                    GUARDAR_CONFIG
                     echo "PRESPUESTA actualizado correctamente."
                 else
                     echo "Error: PRESPUESTA debe ser mayor que PFALLO ($PFALLO) y menor que PVIDA ($PVIDA)."
@@ -201,10 +202,10 @@ opcion_configuracion() {
                 ;;
             6)
                 echo "Niveles: 1=Refranes | 2=+Películas | 3=+Música | 4=+Deportes"
-                read -r -p "Nuevo valor para CATEGORIAS (1..4): " val
-                if es_entero "$val" && [ "$val" -ge 1 ] && [ "$val" -le 4 ]; then
-                    CATEGORIAS="$val"
-                    guardar_config
+                read -r -p "Nuevo valor para CATEGORIAS (1..4): " VAL
+                if ES_ENTERO "$VAL" && [ "$VAL" -ge 1 ] && [ "$VAL" -le 4 ]; then
+                    CATEGORIAS="$VAL"
+                    GUARDAR_CONFIG
                     echo "CATEGORIAS actualizado correctamente."
                 else
                     echo "Error: CATEGORIAS debe ser un entero entre 1 y 4."
@@ -213,10 +214,10 @@ opcion_configuracion() {
                 ;;
             7)
                 echo "Modos IA: 0=Alfabética | 1=Aleatoria | 2=Propia del grupo"
-                read -r -p "Nuevo valor para ESTRATEGIA (0..2): " val
-                if es_entero "$val" && [ "$val" -ge 0 ] && [ "$val" -le 2 ]; then
-                    ESTRATEGIA="$val"
-                    guardar_config
+                read -r -p "Nuevo valor para ESTRATEGIA (0..2): " VAL
+                if ES_ENTERO "$VAL" && [ "$VAL" -ge 0 ] && [ "$VAL" -le 2 ]; then
+                    ESTRATEGIA="$VAL"
+                    GUARDAR_CONFIG
                     echo "ESTRATEGIA actualizado correctamente."
                 else
                     echo "Error: ESTRATEGIA debe ser un entero entre 0 y 2."
@@ -224,15 +225,15 @@ opcion_configuracion() {
                 sleep 1
                 ;;
             8)
-                read -r -p "Nueva ruta para LOG: " val
-                if [ -n "$val" ] && [ ! -d "$val" ]; then
-                    dir_log=$(dirname "$val")
-                    if [ -d "$dir_log" ] || mkdir -p "$dir_log" 2>/dev/null; then
-                        LOG="$val"
-                        guardar_config
+                read -r -p "Nueva ruta para LOG: " VAL
+                if [ -n "$VAL" ] && [ ! -d "$VAL" ]; then
+                    LOCAL_DIR_LOG=$(dirname "$VAL")
+                    if [ -d "$LOCAL_DIR_LOG" ] || mkdir -p "$LOCAL_DIR_LOG" 2>/dev/null; then
+                        LOG="$VAL"
+                        GUARDAR_CONFIG
                         echo "LOG actualizado correctamente."
                     else
-                        echo "Error: No se puede crear o acceder al directorio $dir_log."
+                        echo "Error: No se puede crear o acceder al directorio $LOCAL_DIR_LOG."
                     fi
                 else
                     echo "Error: Debe introducir una ruta de fichero válida."
@@ -248,7 +249,7 @@ opcion_configuracion() {
                 ;;
         esac
     done
-    pausa
+    PAUSA
 }
 
 
