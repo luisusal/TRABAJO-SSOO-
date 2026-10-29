@@ -68,11 +68,187 @@ validar_ficheros_iniciales() {
     fi
 }
 
-opcion_config() {
-    echo "=== CONFIGURACION ==="
+#--------------------------------------------
+#CONFIGURACION
+
     # Lógica de juego: comprobar frases suficientes, validar log, desarrollo por rondas
+es_entero() {
+    case "$1" in
+        ''|*[!0-9]*) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
+guardar_config() {
+    cat <<EOF > "./config.cfg"
+JUGADORES=$JUGADORES
+RONDAS=$RONDAS
+PVIDA=$PVIDA
+PFALLO=$PFALLO
+PRESPUESTA=$PRESPUESTA
+CATEGORIAS=$CATEGORIAS
+ESTRATEGIA=$ESTRATEGIA
+LOG=$LOG
+EOF
+}
+
+# Funciones de las opciones del menú
+opcion_configuracion() {
+    echo "=== CONFIGURACIÓN ==="
+    # Lógica para leer y modificar parámetros de config.cfg de forma persistente
+    JUGADORES=$(grep '^JUGADORES=' "./config.cfg" | cut -d'=' -f2)
+    RONDAS=$(grep '^RONDAS=' "./config.cfg" | cut -d'=' -f2)
+    PVIDA=$(grep '^PVIDA=' "./config.cfg" | cut -d'=' -f2)
+    PFALLO=$(grep '^PFALLO=' "./config.cfg" | cut -d'=' -f2)
+    PRESPUESTA=$(grep '^PRESPUESTA=' "./config.cfg" | cut -d'=' -f2)
+    CATEGORIAS=$(grep '^CATEGORIAS=' "./config.cfg" | cut -d'=' -f2)
+    ESTRATEGIA=$(grep '^ESTRATEGIA=' "./config.cfg" | cut -d'=' -f2)
+    LOG=$(grep '^LOG=' "./config.cfg" | cut -d'=' -f2)
+
+    while true; do
+        clear
+        echo "=========================================="
+        echo "          CONFIGURACIÓN ACTUAL            "
+        echo "=========================================="
+        echo "1) JUGADORES  = $JUGADORES"
+        echo "2) RONDAS     = $RONDAS"
+        echo "3) PVIDA      = $PVIDA"
+        echo "4) PFALLO     = $PFALLO"
+        echo "5) PRESPUESTA = $PRESPUESTA"
+        echo "6) CATEGORIAS = $CATEGORIAS"
+        echo "7) ESTRATEGIA = $ESTRATEGIA"
+        echo "8) LOG        = $LOG"
+        echo "V) Volver al menú principal"
+        echo "=========================================="
+        read -r -p "Seleccione el parámetro a modificar (1-8 o V) >> " SUBOP
+
+        SUBOP_MAYUS=$(echo "$SUBOP" | tr '[:lower:]' '[:upper:]')
+
+        case "$SUBOP_MAYUS" in
+            1)
+                read -r -p "Nuevo valor para JUGADORES (2..4): " VAL
+                if es_entero "$VAL" && [ "$VAL" -ge 2 ] && [ "$VAL" -le 4 ]; then
+                    JUGADORES="$VAL"
+                    guardar_config
+                    echo "JUGADORES actualizado correctamente."
+                else
+                    echo "Error: JUGADORES debe ser un entero entre 2 y 4."
+                fi
+                sleep 1
+                ;;
+            2)
+                read -r -p "Nuevo valor para RONDAS (entero > 0): " VAL
+                if es_entero "$VAL" && [ "$VAL" -gt 0 ]; then
+                    RONDAS="$VAL"
+                    guardar_config
+                    echo "RONDAS actualizado correctamente."
+                else
+                    echo "Error: RONDAS debe ser un entero positivo mayor que 0."
+                fi
+                sleep 1
+                ;;
+            3)
+                read -r -p "Nuevo valor para PVIDA (50..100): " VAL
+                if es_entero "$VAL" && [ "$VAL" -ge 50 ] && [ "$VAL" -le 100 ]; then
+                    PVIDA="$VAL"
+                    while [ "$PRESPUESTA" -ge "$PVIDA" ]; do
+                        echo "Aviso: PRESPUESTA ($PRESPUESTA) debe ser menor que PVIDA ($PVIDA)."
+                        read -r -p "Introduzca un nuevo PRESPUESTA ($((PFALLO + 1))..$((PVIDA - 1))): " NUEVO_PR
+                        if es_entero "$NUEVO_PR" && [ "$NUEVO_PR" -gt "$PFALLO" ] && [ "$NUEVO_PR" -lt "$PVIDA" ]; then
+                            PRESPUESTA="$NUEVO_PR"
+                        fi
+                    done
+                    guardar_config
+                    echo "PVIDA actualizado correctamente."
+                else
+                    echo "Error: PVIDA debe ser un entero entre 50 y 100."
+                fi
+                sleep 1
+                ;;
+            4)
+                read -r -p "Nuevo valor para PFALLO (5..10): " VAL
+                if es_entero "$VAL" && [ "$VAL" -ge 5 ] && [ "$VAL" -le 10 ]; then
+                    PFALLO="$VAL"
+                    while [ "$PRESPUESTA" -le "$PFALLO" ]; do
+                        echo "Aviso: PRESPUESTA ($PRESPUESTA) debe ser mayor que PFALLO ($PFALLO)."
+                        read -r -p "Introduzca un nuevo PRESPUESTA ($((PFALLO + 1))..$((PVIDA - 1))): " NUEVO_PR
+                        if es_entero "$NUEVO_PR" && [ "$NUEVO_PR" -gt "$PFALLO" ] && [ "$NUEVO_PR" -lt "$PVIDA" ]; then
+                            PRESPUESTA="$NUEVO_PR"
+                        fi
+                    done
+                    guardar_config
+                    echo "PFALLO actualizado correctamente."
+                else
+                    echo "Error: PFALLO debe ser un entero entre 5 y 10."
+                fi
+                sleep 1
+                ;;
+            5)
+                MIN_PR=$((PFALLO + 1))
+                MAX_PR=$((PVIDA - 1))
+                read -r -p "Nuevo valor para PRESPUESTA ($MIN_PR..$MAX_PR): " VAL
+                if es_entero "$VAL" && [ "$VAL" -gt "$PFALLO" ] && [ "$VAL" -lt "$PVIDA" ]; then
+                    PRESPUESTA="$VAL"
+                    guardar_config
+                    echo "PRESPUESTA actualizado correctamente."
+                else
+                    echo "Error: PRESPUESTA debe ser mayor que PFALLO ($PFALLO) y menor que PVIDA ($PVIDA)."
+                fi
+                sleep 1
+                ;;
+            6)
+                echo "Niveles: 1=Refranes | 2=+Películas | 3=+Música | 4=+Deportes"
+                read -r -p "Nuevo valor para CATEGORIAS (1..4): " VAL
+                if es_entero "$VAL" && [ "$VAL" -ge 1 ] && [ "$VAL" -le 4 ]; then
+                    CATEGORIAS="$VAL"
+                    guardar_config
+                    echo "CATEGORIAS actualizado correctamente."
+                else
+                    echo "Error: CATEGORIAS debe ser un entero entre 1 y 4."
+                fi
+                sleep 1
+                ;;
+            7)
+                echo "Modos IA: 0=Alfabética | 1=Aleatoria | 2=Propia del grupo"
+                read -r -p "Nuevo valor para ESTRATEGIA (0..2): " VAL
+                if es_entero "$VAL" && [ "$VAL" -ge 0 ] && [ "$VAL" -le 2 ]; then
+                    ESTRATEGIA="$VAL"
+                    guardar_config
+                    echo "ESTRATEGIA actualizado correctamente."
+                else
+                    echo "Error: ESTRATEGIA debe ser un entero entre 0 y 2."
+                fi
+                sleep 1
+                ;;
+            8)
+                read -r -p "Nueva ruta para LOG: " VAL
+                if [ -n "$VAL" ] && [ ! -d "$VAL" ]; then
+                    DIR_LOG=$(dirname "$VAL")
+                    if [ -d "$DIR_LOG" ] || mkdir -p "$DIR_LOG" 2>/dev/null; then
+                        LOG="$VAL"
+                        guardar_config
+                        echo "LOG actualizado correctamente."
+                    else
+                        echo "Error: No se puede crear o acceder al directorio $DIR_LOG."
+                    fi
+                else
+                    echo "Error: Debe introducir una ruta de fichero válida."
+                fi
+                sleep 1
+                ;;
+            V)
+                break
+                ;;
+            *)
+                echo "Opción no válida."
+                sleep 1
+                ;;
+        esac
+    done
     pausa
 }
+
+#---------------------------------------
 
 opcion_jugar() {
     echo "=== INICIANDO PARTIDA ==="
