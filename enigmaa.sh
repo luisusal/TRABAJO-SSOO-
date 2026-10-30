@@ -1,10 +1,8 @@
 #!/bin/bash
 # esta version ya tiene config hecha por luis.
 # compila
-#al mostrar el menu pulso una tecla y
-#sale un mensaje 0.1 s que dice algo de tecla incorrecta
-# (no da tiempo a leerlo) y vuelve a pedir otra tecla
-#30/10, 17:49
+# PAUSA ARREGLADO pero no ver si ejecuta bien
+#30/10, 18:30
 CONFIG_FILE="config.cfg"
 FRASES_FILE="frases.dat"         #aqui pasamos los archivos a constante
 #para mejor manejo
@@ -12,6 +10,11 @@ FRASES_FILE="frases.dat"         #aqui pasamos los archivos a constante
 #------------------------------------------
 TMP_FILE="/tmp/enigma_temp$$" #esto nose que es
 
+
+pausa() {
+    read -n 1 -s -r -p "Pulse una tecla para continuar."
+    echo ""
+}
 
 limpiar_temporales() {
     rm -f /tmp/enigma_temp_* 2>/dev/null
@@ -86,7 +89,7 @@ es_entero() {
 }
 
 guardar_config() {
-    cat <<EOF > "./config.cfg"
+    cat <<EOF > "$CONFIG_FILE"
 JUGADORES=$JUGADORES
 RONDAS=$RONDAS
 PVIDA=$PVIDA
@@ -102,14 +105,14 @@ EOF
 opcion_configuracion() {
     echo "=== CONFIGURACIÓN ==="
     # Lógica para leer y modificar parámetros de config.cfg de forma persistente
-    JUGADORES=$(grep '^JUGADORES=' "./config.cfg" | cut -d'=' -f2)
-    RONDAS=$(grep '^RONDAS=' "./config.cfg" | cut -d'=' -f2)
-    PVIDA=$(grep '^PVIDA=' "./config.cfg" | cut -d'=' -f2)
-    PFALLO=$(grep '^PFALLO=' "./config.cfg" | cut -d'=' -f2)
-    PRESPUESTA=$(grep '^PRESPUESTA=' "./config.cfg" | cut -d'=' -f2)
-    CATEGORIAS=$(grep '^CATEGORIAS=' "./config.cfg" | cut -d'=' -f2)
-    ESTRATEGIA=$(grep '^ESTRATEGIA=' "./config.cfg" | cut -d'=' -f2)
-    LOG=$(grep '^LOG=' "./config.cfg" | cut -d'=' -f2)
+    JUGADORES=$(grep '^JUGADORES=' "$CONFIG_FILE" | cut -d'=' -f2)
+    RONDAS=$(grep '^RONDAS=' "$CONFIG_FILE" | cut -d'=' -f2)
+    PVIDA=$(grep '^PVIDA=' "$CONFIG_FILE" | cut -d'=' -f2)
+    PFALLO=$(grep '^PFALLO=' "$CONFIG_FILE" | cut -d'=' -f2)
+    PRESPUESTA=$(grep '^PRESPUESTA=' "$CONFIG_FILE" | cut -d'=' -f2)
+    CATEGORIAS=$(grep '^CATEGORIAS=' "$CONFIG_FILE" | cut -d'=' -f2)
+    ESTRATEGIA=$(grep '^ESTRATEGIA=' "$CONFIG_FILE" | cut -d'=' -f2)
+    LOG=$(grep '^LOG=' "$CONFIG_FILE" | cut -d'=' -f2)
 
     while true; do
         clear
@@ -326,7 +329,7 @@ opcion_frases() {
                 sleep 1
                 ;;
         esac
-        pause
+        pausa
     done
 }
 
