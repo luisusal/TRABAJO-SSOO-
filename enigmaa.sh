@@ -1,7 +1,13 @@
 #!/bin/bash
-
+# esta version ya tiene config hecha por luis.
+# compila
+#al mostrar el menu pulso una tecla y
+#sale un mensaje 0.1 s que dice algo de tecla incorrecta
+# (no da tiempo a leerlo) y vuelve a pedir otra tecla
+#30/10, 17:49
 CONFIG_FILE="config.cfg"
-FRASES_FILE="frases.dat"         #aqui pasamos los archivos a constante para mejor manejo
+FRASES_FILE="frases.dat"         #aqui pasamos los archivos a constante
+#para mejor manejo
 
 #------------------------------------------
 TMP_FILE="/tmp/enigma_temp$$" #esto nose que es
@@ -47,7 +53,7 @@ mostrar_info_grupo() {
 
 # COMPROBACION ARGUMENTO
 if [ $# -gt 1 ]; then           # si hay GreaterThan 1 arg
-    mostrar_uso                 # muestra error (mostrar_uso) 
+    mostrar_uso                 # muestra error (mostrar_uso)
     exit 1
 
 elif [ $# -eq 1 ]; then         # si hay un argumento (-eq 1)
@@ -370,7 +376,7 @@ while true; do
         F) opcion_frases ;;
         E) opcion_estadisticas ;;
         S) opcion_salir ;;
-        *) 
+        *)
             echo "Opción no válida."
             pausa
             ;;
