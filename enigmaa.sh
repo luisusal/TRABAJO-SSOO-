@@ -1,8 +1,11 @@
 #!/bin/bash
 # esta version ya tiene config hecha por luis.
 # compila
-# PAUSA ARREGLADO pero no ver si ejecuta bien
-#30/10, 18:30
+# MENU PRINCIPAL FUNCIONA, probando otros menus
+
+# CAMBIADO OPCION=$(echo "$OPCION" | tr '[:lower:]' '[:upper:]')
+#POR OPCION=${OPCION^^} en los menus
+#31/10, 14:00
 CONFIG_FILE="config.cfg"
 FRASES_FILE="frases.dat"         #aqui pasamos los archivos a constante
 #para mejor manejo
@@ -75,6 +78,7 @@ validar_ficheros_iniciales() {
         echo "Error: Los archivos 'config.cfg' o 'frases.dat' no existen o estan incompletos."
         return 1
     fi
+    return 0
 }
 
 #--------------------------------------------
@@ -130,10 +134,10 @@ opcion_configuracion() {
         echo "V) Volver al menú principal"
         echo "=========================================="
         read -r -p "Seleccione el parámetro a modificar (1-8 o V) >> " SUBOP
+        SUBOP=${SUBOP^^}
+        #SUBOP_MAYUS=$(echo "$SUBOP" | tr '[:lower:]' '[:upper:]')
 
-        SUBOP_MAYUS=$(echo "$SUBOP" | tr '[:lower:]' '[:upper:]')
-
-        case "$SUBOP_MAYUS" in
+        case "$SUBOP" in
             1)
                 read -r -p "Nuevo valor para JUGADORES (2..4): " VAL
                 if es_entero "$VAL" && [ "$VAL" -ge 2 ] && [ "$VAL" -le 4 ]; then
@@ -165,6 +169,8 @@ opcion_configuracion() {
                         read -r -p "Introduzca un nuevo PRESPUESTA ($((PFALLO + 1))..$((PVIDA - 1))): " NUEVO_PR
                         if es_entero "$NUEVO_PR" && [ "$NUEVO_PR" -gt "$PFALLO" ] && [ "$NUEVO_PR" -lt "$PVIDA" ]; then
                             PRESPUESTA="$NUEVO_PR"
+                        else
+                            echo "Error: PRESPUESTA debe ser mayor que PFALLO y menor que PVIDA."
                         fi
                     done
                     guardar_config
@@ -183,6 +189,8 @@ opcion_configuracion() {
                         read -r -p "Introduzca un nuevo PRESPUESTA ($((PFALLO + 1))..$((PVIDA - 1))): " NUEVO_PR
                         if es_entero "$NUEVO_PR" && [ "$NUEVO_PR" -gt "$PFALLO" ] && [ "$NUEVO_PR" -lt "$PVIDA" ]; then
                             PRESPUESTA="$NUEVO_PR"
+                        else
+                            echo "Error: PRESPUESTA debe ser mayor que PFALLO y menor que PVIDA."
                         fi
                     done
                     guardar_config
@@ -278,9 +286,9 @@ opcion_frases() {
         echo "=========================================="
         read -r -p "Seleccione una opción >> " SUBOP
 
-        SUBOP_MAYUS=$(echo "$SUBOP" | tr '[:lower:]' '[:upper:]')
+        SUBOP=${SUBOP^^}
 
-        case "$SUBOP_MAYUS" in
+        case "$SUBOP" in
             1)
                 clear       # listar frases
                 echo "--- LISTADO DE FRASES EN $FRASES_FILE ---"
@@ -290,14 +298,13 @@ opcion_frases() {
                     echo "El fichero no existe."
                 fi
                 echo ""
-                read -n 1 -s -r -p "Pulse una tecla para continuar."
                 ;;
             2)
                 clear           # añadir frase
                 echo "--- AÑADIR NUEVA FRASE ---"
                 echo "Categorías válidas: REFRAN, PELICULA, MUSICA, DEPORTE"
                 read -r -p "Introduzca la categoría: " CAT_INPUT
-                CAT_MAYUS=$(echo "$CAT_INPUT" | tr '[:lower:]' '[:upper:]')
+                CAT_MAYUS=${CAT_INPUT^^}
                 #comprobacion categoria valida
                 if [ "$CAT_MAYUS" != "REFRAN" ] && [ "$CAT_MAYUS" != "PELICULA" ] && [ "$CAT_MAYUS" != "MUSICA" ] && [ "$CAT_MAYUS" != "DEPORTE" ]; then
                     echo "Error: Categoría no válida."
@@ -307,7 +314,7 @@ opcion_frases() {
 
                 read -r -p "Introduzca la frase (sin tildes): " FRASE_INPUT
                 # Convertir a mayúsculas automáticamente
-                FRASE_MAYUS=$(echo "$FRASE_INPUT" | tr '[:lower:]' '[:upper:]')
+                FRASE_MAYUS=${FRASE_INPUT^^}
 
                 # Validar que la frase no esté vacía y solo contenga letras mayúsculas y espacios
                 if [ -z "$FRASE_MAYUS" ] || echo "$FRASE_MAYUS" | grep -E -q '[^A-Z ]'; then
@@ -355,7 +362,9 @@ opcion_salir() {
 
 
 # Ejecución principal
-validar_ficheros_iniciales
+if ! validar_ficheros_iniciales; then
+    exit 1
+fi
 
 while true; do
     clear
@@ -368,11 +377,10 @@ while true; do
     echo "E) ESTADÍSTICAS"
     echo "S) SALIR"
     echo "===================================="
-    read -p "Introduzca una opción >> " OPCION
-
+    read -r -p "Introduzca una opción >> " OPCION
+    OPCION=${OPCION^^}
     # Conversión a mayúscula de la opción elegida
-    OPCION=$(echo "$OPCION" | tr '[:lower:]' '[:upper:]')
-
+    #OPCION=$(echo "$OPCION" | tr '[:lower:]' '[:upper:]')
     case "$OPCION" in
         C) opcion_configuracion ;;
         J) opcion_jugar ;;
