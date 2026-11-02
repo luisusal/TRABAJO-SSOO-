@@ -1,13 +1,11 @@
 #!/bin/bash
-# esta version ya tiene config hecha por luis.
-# compila
-# MENU PRINCIPAL FUNCIONA, probando otros menus
+# funciona config, frases, principal
+# en teoria estadisticas esta bien
+# falta el juego y validar unas cosillas
 
-# CAMBIADO OPCION=$(echo "$OPCION" | tr '[:lower:]' '[:upper:]')
-#POR OPCION=${OPCION^^} en los menus
-#31/10, 14:00
-CONFIG_FILE="config.cfg"
-FRASES_FILE="frases.dat"         #aqui pasamos los archivos a constante
+#2/11, 16:40
+CONFIG_FILE="./config.cfg"
+FRASES_FILE="./frases.dat"         #aqui pasamos los archivos a constante
 #para mejor manejo
 
 #------------------------------------------
@@ -20,7 +18,7 @@ pausa() {
 }
 
 limpiar_temporales() {
-    rm -f /tmp/enigma_temp_* 2>/dev/null
+    rm -f /tmp/enigma_temp_* 2>/dev/null    # rm borra cualqiuer archivo que empiece por 
 }
 
 # trampa para capturar salidas inesperadas
@@ -636,8 +634,217 @@ opcion_frases() {
 
 
 opcion_estadisticas() {
-    echo "=== ESTADÍSTICAS DEL JUEGO ==="
     # Lógica para procesar el archivo de log y mostrar métricas
+	LOG=$(grep '^LOG=' "$CONFIG_FILE" | cut -d'=' -f2) 
+	#obtiene la ruta dellog desde config_file y lo guarda en la variable LOG
+
+	if [ -z "$LOG" ]; then
+		echo "Error: no se ha definido la ruta del LOG en config.cfg"
+		pausa
+		return
+	fi			#comprueba que la variable LOG esta vacioa (-z)
+
+	if [ ! -f "$LOG" ] || [ ! -r "$LOG" ] || [ ! -s "$LOG" ]; then
+		echo "Error: El fichero de registro ($LOG) no existe, está vacío o no se puede leer."
+		pausa
+		return		#si el archivo no existe (-f), o no se puede leer(-r) o esta 				#vacio(-s)  ==> error
+	fi
+
+	PARTIDAS_JUGADAS=0		#inicializacion de contadores/variables
+	SUMA_TPO=0
+	MIN_TPO=-1
+	MAX_TPO=-1
+	FECHA_MIN=""
+	HORA_MIN=""
+	FECHA_MAX=""
+	HORA_MAX=""
+	SUMA_RONDAS=0
+	SUMA_LETRAS=0
+	SUMA_FRASES=0
+
+	for (( I=1; I<=4; I++ )); do	#inicializa arrays para participaciones y victorias
+		PART_J[$I]=0			# de cada jugador
+		GANADAS_J[$I]=0
+	done
+
+	for (( I=0; I<=2; I++ )); do
+		CONT_EST[$I]=0
+	done
+
+	for (( I=1; I<=4; I++ )); do
+		CONT_CAT[$I]=0
+	done
+
+	while IFS= read -r REGISTRO || [ -n "$REGISTRO" ]; do
+		# LEE EL ARCHIVO LOG LINEA A LINEA, separándolas por |
+
+		if [ -z "$REGISTRO" ]; then
+			continue
+		fi
+
+		if [ "$REGISTRO" = "FECHA|HORA|TPO|JUGADORES|RONDAS|PVIDA|PFALLO|PRESPUESTA|CATEGORIAS|ESTRATEGIA|GANADOR|RONDAS_GANADAS_J1|RONDAS_GANADAS_J2|RONDAS_GANADAS_J3|RONDAS_GANADAS_J4|LETRAS_UTILIZADAS|FRASES_RESUELTAS" ]; then
+			continue	# para que no lea la cabecera
+		fi
+
+		if [ "$(printf '%s' "$REGISTRO" | tr -cd '|' | wc -c)" -ne 16 ]; then
+			echo "Aviso: Registro incompleto o con campos adicionales. Se ignorará."
+			continue
+		fi
+
+		IFS='|' read -r F_FECHA F_HORA F_TPO F_JUG F_RONDAS F_PVIDA F_PFALLO F_PRESP F_CAT F_EST F_GAN F_RG1 F_RG2 F_RG3 F_RG4 F_LETRAS F_FRASES <<< "$REGISTRO"
+
+		if [[ ! "$F_TPO" =~ ^[0-9]+$ ]] || \
+			[[ ! "$F_JUG" =~ ^[0-9]+$ ]] || \
+			[[ ! "$F_RONDAS" =~ ^[0-9]+$ ]] || \
+			[[ ! "$F_PVIDA" =~ ^[0-9]+$ ]] || \
+			[[ ! "$F_PFALLO" =~ ^[0-9]+$ ]] || \
+			[[ ! "$F_PRESP" =~ ^[0-9]+$ ]] || \
+			[[ ! "$F_LETRAS" =~ ^[0-9]+$ ]] || \
+			[[ ! "$F_FRASES" =~ ^[0-9]+$ ]]; then
+			echo "Aviso: Se ha encontrado un registro con datos numéricos incorrectos. Se ignorará."
+			continue
+		fi
+		# validamos que sean números validos
+
+		if [ "$F_JUG" -lt 2 ] || [ "$F_JUG" -gt 4 ] || \
+			[[ ! "$F_CAT" =~ ^[1-4]$ ]] || \
+			[[ ! "$F_EST" =~ ^[0-2]$ ]] || \
+			[[ ! "$F_GAN" =~ ^[0-4]$ ]]; then
+			echo "Aviso: Se ha encontrado un registro con valores fuera de rango. Se ignorará."
+			continue
+		fi
+
+		if [[ ! "$F_RG1" =~ ^[0-9]+$ ]] || \
+			[[ ! "$F_RG2" =~ ^[0-9]+$ ]] || \
+			{ [[ "$F_RG3" != "-" ]] && [[ ! "$F_RG3" =~ ^[0-9]+$ ]]; } || \
+			{ [[ "$F_RG4" != "-" ]] && [[ ! "$F_RG4" =~ ^[0-9]+$ ]]; }; then
+			echo "Aviso: Se ha encontrado un registro con datos de participación incorrectos. Se ignorará."
+			continue
+		fi
+
+		if { [ "$F_JUG" -eq 2 ] && { [ "$F_RG3" != "-" ] || [ "$F_RG4" != "-" ]; }; } || \
+			{ [ "$F_JUG" -eq 3 ] && [ "$F_RG3" = "-" ]; } || \
+			{ [ "$F_JUG" -eq 4 ] && { [ "$F_RG3" = "-" ] || [ "$F_RG4" = "-" ]; }; }; then
+			echo "Aviso: El número de jugadores no coincide con sus participaciones. Se ignorará."
+			continue
+		fi
+
+		if [ "$F_GAN" -ge 1 ] && [ "$F_GAN" -le 4 ]; then
+			if [ "$F_GAN" -eq 3 ] && [ "$F_RG3" = "-" ] || \
+				[ "$F_GAN" -eq 4 ] && [ "$F_RG4" = "-" ]; then
+				echo "Aviso: El ganador no coincide con los jugadores participantes. Se ignorará."
+				continue
+			fi
+		fi
+
+		PARTIDAS_JUGADAS=$(( PARTIDAS_JUGADAS + 1 ))
+		SUMA_TPO=$(( SUMA_TPO + F_TPO ))
+		SUMA_RONDAS=$(( SUMA_RONDAS + F_RONDAS ))
+		SUMA_LETRAS=$(( SUMA_LETRAS + F_LETRAS ))
+		SUMA_FRASES=$(( SUMA_FRASES + F_FRASES ))
+		# actualiza las stats con las de la partida actual
+
+		if [ "$MIN_TPO" -eq -1 ] || [ "$F_TPO" -lt "$MIN_TPO" ]; then
+			MIN_TPO=$F_TPO
+			FECHA_MIN=$F_FECHA
+			HORA_MIN=$F_HORA
+		fi	# encontrar la partida mas corta
+
+		if [ "$MAX_TPO" -eq -1 ] || [ "$F_TPO" -gt "$MAX_TPO" ]; then
+			MAX_TPO=$F_TPO
+			FECHA_MAX=$F_FECHA
+			HORA_MAX=$F_HORA
+		fi	# encontrar la partida mas larga
+
+		PART_J[1]=$(( PART_J[1] + 1 ))
+		PART_J[2]=$(( PART_J[2] + 1 ))
+
+		if [ "$F_RG3" != "-" ]; then
+			PART_J[3]=$(( PART_J[3] + 1 ))
+		fi
+
+		if [ "$F_RG4" != "-" ]; then
+			PART_J[4]=$(( PART_J[4] + 1 ))
+		fi	#cuantas partidas ha jugado cada jugador y comprobar si han jugado j3 y j4
+
+		if [[ "$F_GAN" =~ ^[1-4]$ ]]; then
+			GANADAS_J[$F_GAN]=$(( GANADAS_J[$F_GAN] + 1 ))
+		fi	#cuantas partidas ha ganado cada jugador 
+
+		CONT_EST[$F_EST]=$(( CONT_EST[$F_EST] + 1 )) #actualiza +1 con la estrategia usada
+		CONT_CAT[$F_CAT]=$(( CONT_CAT[$F_CAT] + 1 )) #actualiza +1 con la categoría usada
+
+	done < "$LOG"
+
+	if [ "$PARTIDAS_JUGADAS" -eq 0 ]; then
+		echo "No hay partidas registradas todavía en el fichero $LOG."
+		pausa
+		return
+	fi	# si hay partidas registradas en log
+
+	TIEMPO_MEDIO=$(( SUMA_TPO / PARTIDAS_JUGADAS ))
+	PROMEDIO_RONDAS=$(( SUMA_RONDAS / PARTIDAS_JUGADAS ))
+	PROMEDIO_LETRAS=$(( SUMA_LETRAS / PARTIDAS_JUGADAS ))	#calcular promedios
+
+	if [ "$SUMA_RONDAS" -gt 0 ]; then
+		TASA_RESOLUCION=$(( (SUMA_FRASES * 100) / SUMA_RONDAS ))
+	else
+		TASA_RESOLUCION=0
+	fi	# calculo tasa resolucion
+
+	MAX_USO_EST=-1
+	for (( I=0; I<=2; I++ )); do
+		if [ "${CONT_EST[$I]}" -gt "$MAX_USO_EST" ]; then
+			MAX_USO_EST=${CONT_EST[$I]}
+		fi
+	done
+
+	EST_EMPATADAS=""	# si hay estraegas que se han usado igual de veces
+	for (( I=0; I<=2; I++ )); do
+		if [ "${CONT_EST[$I]}" -eq "$MAX_USO_EST" ]; then
+			EST_EMPATADAS="${EST_EMPATADAS}Estrategia-$I (${CONT_EST[$I]} partidas) "
+		fi
+	done
+
+	MAX_USO_CAT=-1
+	for (( I=1; I<=4; I++ )); do
+		if [ "${CONT_CAT[$I]}" -gt "$MAX_USO_CAT" ]; then
+			MAX_USO_CAT=${CONT_CAT[$I]}
+		fi
+	done
+
+	CAT_EMPATADAS=""	# si hay categorías que se hn usado igual de veces
+	for (( I=1; I<=4; I++ )); do
+		if [ "${CONT_CAT[$I]}" -eq "$MAX_USO_CAT" ]; then
+			CAT_EMPATADAS="${CAT_EMPATADAS}Nivel-$I (${CONT_CAT[$I]} partidas) "
+		fi
+	done
+
+	clear
+	echo "========================================================"
+	echo "                ESTADÍSTICAS DEL JUEGO                  "
+	echo "========================================================"
+	echo "- Partidas jugadas: $PARTIDAS_JUGADAS"
+	echo "- Tiempo medio de partida: $TIEMPO_MEDIO segundos"
+	echo "- Partida más corta: Fecha $FECHA_MIN a las $HORA_MIN ($MIN_TPO segundos)"
+	echo "- Partida más larga: Fecha $FECHA_MAX a las $HORA_MAX ($MAX_TPO segundos)"
+	echo "--------------------------------------------------------"
+	echo "RENDIMIENTO POR JUGADOR:"
+	for (( I=1; I<=4; I++ )); do
+		if [ "${PART_J[$I]}" -gt 0 ]; then
+			PORC_VIC=$(( (GANADAS_J[$I] * 100) / PART_J[$I] ))
+			echo "  * Jugador $I: ${GANADAS_J[$I]} victorias en ${PART_J[$I]} partidas jugadas ($PORC_VIC%)"
+		else
+			echo "  * Jugador $I: Sin participaciones registradas (0%)"
+		fi
+	done
+	echo "--------------------------------------------------------"
+	echo "- Promedio de rondas por partida: $PROMEDIO_RONDAS"
+	echo "- Estrategia de IA más utilizada: $EST_EMPATADAS"
+	echo "- Nivel de categoría más utilizado: $CAT_EMPATADAS"
+	echo "- Promedio de letras utilizadas por partida: $PROMEDIO_LETRAS"
+	echo "- Estadística libre (Eficacia de resolución): $TASA_RESOLUCION% ($SUMA_FRASES frases resueltas de $SUMA_RONDAS rondas)"
+	echo "========================================================"
     pausa
 }
 
