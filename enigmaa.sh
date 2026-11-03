@@ -72,17 +72,101 @@ fi
 
 # VALIDAR FICHEROS
 validar_ficheros_iniciales() {
-    if [ ! -f "$CONFIG_FILE" ] || [ ! -f "$FRASES_FILE" ]; then
-        echo "Error: Los archivos 'config.cfg' o 'frases.dat' no existen o estan incompletos."
-        return 1
-    fi
-    return 0
+	if [ ! -f "$CONFIG_FILE" ] || [ ! -r "$CONFIG_FILE" ] || [ ! -s "$CONFIG_FILE" ]; then
+		echo "Error: config.cfg no existe, no se puede leer o está vacío."
+		return 1
+	fi
+
+	if [ ! -f "$FRASES_FILE" ] || [ ! -r "$FRASES_FILE" ] || [ ! -s "$FRASES_FILE" ]; then
+		echo "Error: frases.dat no existe, no se puede leer o está vacío."
+		return 1
+	fi
+
+	for clave in JUGADORES RONDAS PVIDA PFALLO PRESPUESTA CATEGORIAS ESTRATEGIA LOG; do
+		cantidad=$(grep -c "^$clave=" "$CONFIG_FILE")
+
+		if [ "$cantidad" -ne 1 ]; then
+			echo "Error: El parámetro $clave falta o está repetido en config.cfg."
+			return 1
+		fi
+	done
+
+	while IFS= read -r linea || [ -n "$linea" ]; do
+		case "$linea" in
+			JUGADORES=*|RONDAS=*|PVIDA=*|PFALLO=*|PRESPUESTA=*|CATEGORIAS=*|ESTRATEGIA=*|LOG=*)
+				;;
+			*)
+				echo "Error: Hay una línea no válida en config.cfg: $linea"
+				return 1
+				;;
+		esac
+	done < "$CONFIG_FILE"
+
+	JUGADORES=$(sed -n 's/^JUGADORES=//p' "$CONFIG_FILE")
+	RONDAS=$(sed -n 's/^RONDAS=//p' "$CONFIG_FILE")
+	PVIDA=$(sed -n 's/^PVIDA=//p' "$CONFIG_FILE")
+	PFALLO=$(sed -n 's/^PFALLO=//p' "$CONFIG_FILE")
+	PRESPUESTA=$(sed -n 's/^PRESPUESTA=//p' "$CONFIG_FILE")
+	CATEGORIAS=$(sed -n 's/^CATEGORIAS=//p' "$CONFIG_FILE")
+	ESTRATEGIA=$(sed -n 's/^ESTRATEGIA=//p' "$CONFIG_FILE")
+	LOG=$(sed -n 's/^LOG=//p' "$CONFIG_FILE")
+
+	if ! es_entero "$JUGADORES" || [ "$JUGADORES" -lt 2 ] || [ "$JUGADORES" -gt 4 ]; then
+		echo "Error: JUGADORES debe ser un entero entre 2 y 4."
+		return 1
+	fi
+
+	if ! es_entero "$RONDAS" || [ "$RONDAS" -le 0 ]; then
+		echo "Error: RONDAS debe ser un entero positivo."
+		return 1
+	fi
+
+	if ! es_entero "$PVIDA" || [ "$PVIDA" -lt 50 ] || [ "$PVIDA" -gt 100 ]; then
+		echo "Error: PVIDA debe ser un entero entre 50 y 100."
+		return 1
+	fi
+
+	if ! es_entero "$PFALLO" || [ "$PFALLO" -lt 5 ] || [ "$PFALLO" -gt 10 ]; then
+		echo "Error: PFALLO debe ser un entero entre 5 y 10."
+		return 1
+	fi
+
+	if ! es_entero "$PRESPUESTA" || [ "$PRESPUESTA" -le "$PFALLO" ] || [ "$PRESPUESTA" -ge "$PVIDA" ]; then
+		echo "Error: PRESPUESTA debe ser mayor que PFALLO y menor que PVIDA."
+		return 1
+	fi
+
+	if ! es_entero "$CATEGORIAS" || [ "$CATEGORIAS" -lt 1 ] || [ "$CATEGORIAS" -gt 4 ]; then
+		echo "Error: CATEGORIAS debe ser un entero entre 1 y 4."
+		return 1
+	fi
+
+	if ! es_entero "$ESTRATEGIA" || [ "$ESTRATEGIA" -lt 0 ] || [ "$ESTRATEGIA" -gt 2 ]; then
+		echo "Error: ESTRATEGIA debe ser un entero entre 0 y 2."
+		return 1
+	fi
+
+	if [ -z "$LOG" ] || [ -d "$LOG" ]; then
+		echo "Error: La ruta LOG está vacía o no es una ruta de archivo válida."
+		return 1
+	fi
+
+	errores=$(LC_ALL=C egrep -nv '^(REFRAN|PELICULA|MUSICA|DEPORTE):[A-Z]+( [A-Z]+)*$' "$FRASES_FILE")
+
+	if [ -n "$errores" ]; then
+		echo "Error: Hay líneas con formato incorrecto en frases.dat:"
+		echo "$errores"
+		return 1
+	fi
+
+	return 0
 }
+
 
 #--------------------------------------------
 #CONFIGURACION
 
-    # Lógica de juego: comprobar frases suficientes, validar log, desarrollo por rondas
+    # Lógica de juego: comprobar frases suficientes, validar log, desarrollo porrondas
 es_entero() {
     case "$1" in
         ''|*[!0-9]*) return 1 ;;
@@ -272,10 +356,13 @@ elegir_letra_ia() {
     if [ "$modo" -eq 0 ]; then
         orden="A B C D E F G H I J K L M N O P Q R S T U V W X Y Z"
         for l in $orden; do
-            if ! echo "$usadas" | grep -q "$l"; then
-                echo "$l"
-                return
-            fi
+            case "$usadas" in
+                *"$l"*) ;;
+                *)
+                    echo "$l"
+                    return
+                    ;;
+            esac
         done
     elif [ "$modo" -eq 1 ]; then
         if [ -z "$usadas" ]; then
@@ -290,10 +377,13 @@ elegir_letra_ia() {
     else
         orden="E A O S R N I D L C T U M P B G V Y Q H F Z J X W K"
         for l in $orden; do
-            if ! echo "$usadas" | grep -q "$l"; then
-                echo "$l"
-                return
-            fi
+            case "$usadas" in
+                *"$l"*) ;;
+                *)
+                    echo "$l"
+                    return
+                    ;;
+            esac
         done
     fi
 }
@@ -301,7 +391,7 @@ elegir_letra_ia() {
 registrar_log() {
     fecha_fin=$(date +%d%m%y)
     hora_fin=$(date +%H:%M:%S)
-    duracion=$(( $(date +%s) - t_inicio ))
+    duracion=$(( SECONDS - t_inicio ))
 
     if [ "$JUGADORES" -ge 3 ]; then
         rg3="${rgj[3]}"
@@ -309,7 +399,7 @@ registrar_log() {
         rg3="-"
     fi
 
-    if [ "$JUGADORES" -eq 4 ]; then
+    if [ "$JUGADORES" -ge 4 ]; then
         rg4="${rgj[4]}"
     else
         rg4="-"
@@ -323,17 +413,18 @@ registrar_log() {
 }
 
 opcion_jugar() {
-    JUGADORES=$(grep '^JUGADORES=' "./config.cfg" | cut -d'=' -f2)
-    RONDAS=$(grep '^RONDAS=' "./config.cfg" | cut -d'=' -f2)
-    PVIDA=$(grep '^PVIDA=' "./config.cfg" | cut -d'=' -f2)
-    PFALLO=$(grep '^PFALLO=' "./config.cfg" | cut -d'=' -f2)
-    PRESPUESTA=$(grep '^PRESPUESTA=' "./config.cfg" | cut -d'=' -f2)
-    CATEGORIAS=$(grep '^CATEGORIAS=' "./config.cfg" | cut -d'=' -f2)
-    ESTRATEGIA=$(grep '^ESTRATEGIA=' "./config.cfg" | cut -d'=' -f2)
-    LOG=$(grep '^LOG=' "./config.cfg" | cut -d'=' -f2)
+    JUGADORES=$(grep '^JUGADORES=' "$CONFIG_FILE" | cut -d'=' -f2)
+    RONDAS=$(grep '^RONDAS=' "$CONFIG_FILE" | cut -d'=' -f2)
+    PVIDA=$(grep '^PVIDA=' "$CONFIG_FILE" | cut -d'=' -f2)
+    PFALLO=$(grep '^PFALLO=' "$CONFIG_FILE" | cut -d'=' -f2)
+    PRESPUESTA=$(grep '^PRESPUESTA=' "$CONFIG_FILE" | cut -d'=' -f2)
+    CATEGORIAS=$(grep '^CATEGORIAS=' "$CONFIG_FILE" | cut -d'=' -f2)
+    ESTRATEGIA=$(grep '^ESTRATEGIA=' "$CONFIG_FILE" | cut -d'=' -f2)
+    LOG=$(grep '^LOG=' "$CONFIG_FILE" | cut -d'=' -f2)
 
     dir_log=$(dirname "$LOG")
-    if [ -d "$LOG" ] || { [ ! -d "$dir_log" ] && ! mkdir -p "$dir_log" 2>/dev/null; }; then
+    if [ -d "$LOG" ] || { [ ! -d "$dir_log" ] && ! mkdir -p "$dir_log" 2>/dev/null; }; 
+then
         echo "Error: No se puede garantizar el registro posterior en la ruta $LOG."
         pausa
         return
@@ -349,10 +440,16 @@ opcion_jugar() {
         2) filtro_cat="^(REFRAN|PELICULA):" ;;
         3) filtro_cat="^(REFRAN|PELICULA|MUSICA):" ;;
         4) filtro_cat="^(REFRAN|PELICULA|MUSICA|DEPORTE):" ;;
+        *)
+            echo "Error: la configuracion de categorías noe s válida."
+            pausa
+            return ;;
     esac
 
     TMP_FRASES="/tmp/enigma_temp_frases_$$"
-    grep -E "$filtro_cat" "./frases.dat" | sort -u > "$TMP_FRASES"
+    : > "$TMP_FRASES"	
+
+    egrep "$filtro_cat" "$FRASES_FILE" | sort -u > "$TMP_FRASES"
     total_frases_disp=$(wc -l < "$TMP_FRASES")
 
     if [ "$total_frases_disp" -lt "$RONDAS" ]; then
@@ -362,7 +459,7 @@ opcion_jugar() {
         return
     fi
 
-    t_inicio=$(date +%s)
+    t_inicio=$SECONDS
     letras_totales=0
     frases_resueltas=0
     for (( i=1; i<=4; i++ )); do
@@ -375,14 +472,15 @@ opcion_jugar() {
             pvida_j[$i]=$PVIDA
         done
 
-        num_disp=$(wc -l < "$TMP_FRASES")
+      num_disp=$(wc -l < "$TMP_FRASES")
         azar=$(( (RANDOM % num_disp) + 1 ))
-        linea_elegida=$(head -n "$azar" "$TMP_FRASES" | tail -n 1)
-        grep -F -x -v "$linea_elegida" "$TMP_FRASES" > "${TMP_FRASES}_aux"
-        mv "${TMP_FRASES}_aux" "$TMP_FRASES"
+        # Usamos sed -n 'p' para extraer la línea de forma 100% compatible con Encina
+        linea_elegida=$(sed -n "${azar}p" "$TMP_FRASES" | tr -d '\r')
+            sed "${azar}d" "$TMP_FRASES" > "${TMP_FRASES}_aux"
+            mv "${TMP_FRASES}_aux" "$TMP_FRASES"
 
-        cat_actual=$(echo "$linea_elegida" | cut -d':' -f1)
-        frase_actual=$(echo "$linea_elegida" | cut -d':' -f2)
+        cat_actual=$(echo "$linea_elegida" | cut -d':' -f1 | xargs)
+        frase_actual=$(echo "$linea_elegida" | cut -d':' -f2 | xargs)
 
         letras_ronda=""
         historico_ronda=""
@@ -412,9 +510,20 @@ opcion_jugar() {
             if [ "${pvida_j[$turno]}" -le 0 ]; then
                 turno=$(( (turno % JUGADORES) + 1 ))
                 continue
-            fi
+            fi # salta el jugador eliminado
 
-            frase_oculta=$(echo "$frase_actual" | sed "s/[^ $letras_ronda]/_/g")
+            frase_oculta=""
+		for (( j=0; j<${#frase_actual}; j++ )); do
+    		    caracter="${frase_actual:j:1}"
+		    case "$caracter" in
+			" ") frase_oculta="$frase_oculta " ;;
+       			 *)
+           	    	    case "$letras_ronda" in
+               		 	*"$caracter"*) frase_oculta="$frase_oculta$caracter" ;;
+                		*) frase_oculta="${frase_oculta}-" ;;
+           	    	    esac ;;
+    	            esac
+	   done
 
             clear
             echo "========================================================"
@@ -438,7 +547,7 @@ opcion_jugar() {
             echo " >>> TURNO ACTUAL: JUGADOR $turno <<<"
             echo "========================================================"
 
-            if [ "$turno" -eq 1 ]; then
+           if [ "$turno" -eq 1 ]; then
                 echo "Acciones del turno:"
                 echo "1) Solicitar letra"
                 echo "2) Intentar resolver la frase"
@@ -447,21 +556,35 @@ opcion_jugar() {
                 if [ "$accion" = "1" ]; then
                     while true; do
                         read -r -p "Introduzca una letra (A-Z): " letra_in
-                        letra=$(echo "$letra_in" | tr '[:lower:]' '[:upper:]')
+                        letra=${letra_in^^}
 
-                        if [ -z "$letra" ] || [ "${#letra}" -ne 1 ] || echo "$letra" | grep -E -q '[^A-Z]'; then
-                            echo "Entrada inválida. Debe introducir una única letra de la A a la Z."
-                        elif [ -n "$letras_ronda" ] && echo "$letras_ronda" | grep -q "$letra"; then
-                            echo "Aviso: La letra '$letra' ya ha sido utilizada en esta ronda. Pruebe con otra."
+                        if [ -z "$letra" ] || [ "${#letra}" -ne 1 ]; then
+                            echo "Entrada inválida. Debe introducir una letra de la A a la Z."
                         else
-                            break
+                            case "$letra" in
+                                [A-Z])
+                                    case "$letras_ronda" in
+                                        "$letra")
+                                            echo "Aviso: La letra '$letra' ya ha sido utilizada. Pruebe con otra."
+                                            ;;
+                                        *)
+                                            break
+                                            ;;
+                                    esac
+                                    ;;
+                                *)
+                                    echo "Entrada inválida. Debe introducir una letra de la A a la Z." 
+                                    ;;
+                            esac
                         fi
                     done
                 elif [ "$accion" = "2" ]; then
                     read -r -p "Introduzca la frase completa: " resp_in
-                    resp_mayus=$(echo "$resp_in" | tr '[:lower:]' '[:upper:]')
+                    RESP_MAYUS=${resp_in^^}
+		    RESP_MAYUS=$(echo "$RESP_MAYUS" | xargs)
+                    FRASE_LIMPIA=$(echo "$frase_actual" | xargs)
 
-                    if [ "$resp_mayus" = "$frase_actual" ]; then
+                    if [ "$RESP_MAYUS" = "$FRASE_LIMPIA" ]; then
                         echo "¡CORRECTO! El Jugador 1 resuelve la frase y gana la ronda."
                         rgj[1]=$(( rgj[1] + 1 ))
                         frases_resueltas=$(( frases_resueltas + 1 ))
@@ -483,20 +606,50 @@ opcion_jugar() {
                     sleep 1
                     continue
                 fi
-            else
+            else    # aqui juega la ia
                 sleep 1
                 letra=$(elegir_letra_ia "$letras_ronda" "$ESTRATEGIA")
                 echo "El Jugador $turno (IA) solicita la letra: $letra"
                 sleep 1
             fi
 
+            # Guardamos cómo estaba la frase oculta ANTES de añadir la nueva letra
+            antigua_oculta=""
+		for (( j=0; j<${#frase_actual}; j++ )); do
+			caracter="${frase_actual:j:1}"
+			case "$caracter" in
+				" ") antigua_oculta="$antigua_oculta " ;;
+				*)
+					case "$letras_ronda" in
+						*"$caracter"*) antigua_oculta="$antigua_oculta$caracter" ;;
+						*) antigua_oculta="${antigua_oculta}-" ;;
+					esac
+					;;
+			esac
+		done
+
             letras_ronda="${letras_ronda}${letra}"
             historico_ronda="${historico_ronda}${letra} "
             letras_totales=$(( letras_totales + 1 ))
 
-            if echo "$frase_actual" | grep -q "$letra"; then
+            # Generamos la nueva frase oculta CON la nueva letra incluida
+            nueva_oculta=""
+	    for (( j=0; j<${#frase_actual}; j++ )); do
+		caracter="${frase_actual:j:1}"
+		case "$caracter" in
+			" ") nueva_oculta="$nueva_oculta " ;;
+			*)
+				case "$letras_ronda" in
+					*"$caracter"*) nueva_oculta="$nueva_oculta$caracter" ;;
+					*) nueva_oculta="${nueva_oculta}-" ;;
+			esac
+			;;
+		esac
+            done
+
+            # Si la máscara ha cambiado, es que la letra ha destapado al menos un carácter (¡ACIERTO!)
+            if [ "$nueva_oculta" != "$antigua_oculta" ]; then
                 echo "¡Acierto! La letra '$letra' está en la frase."
-                nueva_oculta=$(echo "$frase_actual" | sed "s/[^ $letras_ronda]/_/g")
                 if [ "$nueva_oculta" = "$frase_actual" ]; then
                     echo "¡Se han revelado todas las letras! El Jugador $turno gana la ronda."
                     rgj[$turno]=$(( rgj[$turno] + 1 ))
@@ -508,6 +661,8 @@ opcion_jugar() {
                 sleep 2
             else
                 echo "¡Fallo! La letra '$letra' no está. Pierde $PFALLO PVIDA."
+                # Como falló, eliminamos la letra que acabamos de añadir a letras_ronda para que no distorsione
+    #            letras_ronda=${letras_ronda%?}
                 pvida_j[$turno]=$(( pvida_j[$turno] - PFALLO ))
                 if [ "${pvida_j[$turno]}" -le 0 ]; then
                     pvida_j[$turno]=0
@@ -522,7 +677,7 @@ opcion_jugar() {
     rm -f "$TMP_FRASES" "${TMP_FRASES}_aux" 2>/dev/null
 
     if [ "$frases_resueltas" -eq 0 ]; then
-        ganador_final=0
+        ganador_final=0     # nadie gana si no se resuelven frases
     else
         ganador_final=1
         max_rondas=${rgj[1]}
@@ -574,11 +729,11 @@ opcion_frases() {
         echo "2) Añadir una nueva frase"
         echo "V) Volver al menú principal"
         echo "=========================================="
-        read -r -p "Seleccione una opción >> " SUBOP
+        read -r -p "Seleccione una opción > " OPCIONF
 
-        SUBOP=${SUBOP^^}
+        OPCIONF=${OPCIONF^^}
 
-        case "$SUBOP" in
+        case "$OPCIONF" in
             1)
                 clear       # listar frases
                 echo "--- LISTADO DE FRASES EN $FRASES_FILE ---"
@@ -606,11 +761,14 @@ opcion_frases() {
                 # Convertir a mayúsculas automáticamente
                 FRASE_MAYUS=${FRASE_INPUT^^}
 
-                # Validar que la frase no esté vacía y solo contenga letras mayúsculas y espacios
-                if [ -z "$FRASE_MAYUS" ] || echo "$FRASE_MAYUS" | grep -E -q '[^A-Z ]'; then
-                    echo "Error: La frase contiene caracteres no permitidos (tildes, símbolos o números) o está vacía."
-                    sleep 2
-                    continue
+                # Validar que la frase no esté vacía y solo contenga letramayúsculas y espacios
+                if [ -z "$FRASE_MAYUS" ]; then
+		    case "$FRASE_MAYUS" in
+			*[!A-Z\ ]*)
+	                    echo "Error: La frase contiene caracteres no permitidos (tildes, símbolos o números) o está vacía."
+        	            sleep 2
+                	    continue ;;
+		   esac
                 fi
 
                 # Guardar de forma persistente en frases.dat
@@ -645,9 +803,9 @@ opcion_estadisticas() {
 	fi			#comprueba que la variable LOG esta vacioa (-z)
 
 	if [ ! -f "$LOG" ] || [ ! -r "$LOG" ] || [ ! -s "$LOG" ]; then
-		echo "Error: El fichero de registro ($LOG) no existe, está vacío o no se puede leer."
+		echo "Error: El fichero de registro ($LOG) no existe, está vacío o  se puede leer."
 		pausa
-		return		#si el archivo no existe (-f), o no se puede leer(-r) o esta 				#vacio(-s)  ==> error
+		return		#si el archivo no existe (-f), o no se puede leer(-r) o esta vacio(-s)  ==> error
 	fi
 
 	PARTIDAS_JUGADAS=0		#inicializacion de contadores/variables
@@ -701,7 +859,7 @@ opcion_estadisticas() {
 			[[ ! "$F_PRESP" =~ ^[0-9]+$ ]] || \
 			[[ ! "$F_LETRAS" =~ ^[0-9]+$ ]] || \
 			[[ ! "$F_FRASES" =~ ^[0-9]+$ ]]; then
-			echo "Aviso: Se ha encontrado un registro con datos numéricos incorrectos. Se ignorará."
+			echo "Aviso: Se ha encontrado un registro con datos numéricosincorrectos. Se ignorará."
 			continue
 		fi
 		# validamos que sean números validos
@@ -717,7 +875,8 @@ opcion_estadisticas() {
 		if [[ ! "$F_RG1" =~ ^[0-9]+$ ]] || \
 			[[ ! "$F_RG2" =~ ^[0-9]+$ ]] || \
 			{ [[ "$F_RG3" != "-" ]] && [[ ! "$F_RG3" =~ ^[0-9]+$ ]]; } || \
-			{ [[ "$F_RG4" != "-" ]] && [[ ! "$F_RG4" =~ ^[0-9]+$ ]]; }; then
+			{ [[ "$F_RG4" != "-" ]] && [[ ! "$F_RG4" =~ ^[0-9]+$ ]]; }; 
+then
 			echo "Aviso: Se ha encontrado un registro con datos de participación incorrectos. Se ignorará."
 			continue
 		fi
@@ -725,7 +884,7 @@ opcion_estadisticas() {
 		if { [ "$F_JUG" -eq 2 ] && { [ "$F_RG3" != "-" ] || [ "$F_RG4" != "-" ]; }; } || \
 			{ [ "$F_JUG" -eq 3 ] && [ "$F_RG3" = "-" ]; } || \
 			{ [ "$F_JUG" -eq 4 ] && { [ "$F_RG3" = "-" ] || [ "$F_RG4" = "-" ]; }; }; then
-			echo "Aviso: El número de jugadores no coincide con sus participaciones. Se ignorará."
+			echo "Aviso: El número de jugadores no coincide con susparticipaciones. Se ignorará."
 			continue
 		fi
 
@@ -826,7 +985,7 @@ opcion_estadisticas() {
 	echo "========================================================"
 	echo "- Partidas jugadas: $PARTIDAS_JUGADAS"
 	echo "- Tiempo medio de partida: $TIEMPO_MEDIO segundos"
-	echo "- Partida más corta: Fecha $FECHA_MIN a las $HORA_MIN ($MIN_TPO segundos)"
+	echo "- Partida más corta: Fecha $FECHA_MIN a las $HORA_MIN ($MIN_TPO} segundos)"
 	echo "- Partida más larga: Fecha $FECHA_MAX a las $HORA_MAX ($MAX_TPO segundos)"
 	echo "--------------------------------------------------------"
 	echo "RENDIMIENTO POR JUGADOR:"
@@ -843,7 +1002,7 @@ opcion_estadisticas() {
 	echo "- Estrategia de IA más utilizada: $EST_EMPATADAS"
 	echo "- Nivel de categoría más utilizado: $CAT_EMPATADAS"
 	echo "- Promedio de letras utilizadas por partida: $PROMEDIO_LETRAS"
-	echo "- Estadística libre (Eficacia de resolución): $TASA_RESOLUCION% ($SUMA_FRASES frases resueltas de $SUMA_RONDAS rondas)"
+	echo "- Estadística libre (Eficacia de resolución): $TASA_RESOLUCION ($SUMA_FRASES frases resueltas de $SUMA_RONDAS rondas)"
 	echo "========================================================"
     pausa
 }
